@@ -101,6 +101,7 @@ export async function renderProject(root, { pid }) {
         <input class="title-input" id="title-input" value="${project.title}" maxlength="120" aria-label="강의 제목">
         <span class="save-status" id="save-status">저장됨</span>
         <span class="grow"></span>
+        <a class="help-link" href="/guide.html" target="_blank" rel="noopener">사용법</a>
         <a class="btn" href="#/p/${pid}/takes">테이크 · 영상 만들기</a>
         <a class="btn rec" href="#/p/${pid}/studio">● 촬영하기</a>
       </header>

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- guide:start -->
+<title>강의 스튜디오 사용법</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+  :root {
+    --paper: #f6f7f9;
+    --card: #ffffff;
+    --ink: #1a1c20;
+    --muted: #5f6672;
+    --line: #e3e6ea;
+    --rec: #e5484d;
+    --soft-rec: #ffe9ea;
+    --key: #3355ff;
+    --soft-key: #e8edff;
+    --cap: #f0f2f5;
+    --t-slide: #3355ff;
+    --t-demo: #0f8a6a;
+    --t-video: #c2410c;
+    --t-face: #8b5cf6;
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 10px 28px rgba(16, 24, 40, 0.08);
+    --sans: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #0e0f12;
+      --card: #17191e;
+      --ink: #eef0f3;
+      --muted: #a1a7b2;
+      --line: #2b2f37;
+      --soft-rec: #3b1618;
+      --soft-key: #1d2748;
+      --cap: #23262e;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #0e0f12;
+    --card: #17191e;
+    --ink: #eef0f3;
+    --muted: #a1a7b2;
+    --line: #2b2f37;
+    --soft-rec: #3b1618;
+    --soft-key: #1d2748;
+    --cap: #23262e;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.7 var(--sans);
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    padding-inline: 20px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding-block: 48px 72px; }
+  h1, h2, h3 { line-height: 1.3; text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  b, strong { font-weight: 700; }
+  a { color: var(--key); }
+  img { max-width: 100%; height: auto; display: block; }
+
+  /* ---------- top ---------- */
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.02em; color: var(--rec); }
+  .rec-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rec); }
+  @media (prefers-reduced-motion: no-preference) { .rec-dot { animation: blink 1.4s ease-in-out infinite; } }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 900; letter-spacing: -0.02em; margin-top: 14px; }
+  .lead { margin-top: 14px; font-size: 18px; color: var(--muted); max-width: 34em; }
+  .steps-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 28px; }
+  .steps-nav a { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-weight: 700; }
+  .steps-nav a:hover, .steps-nav a:focus-visible { border-color: var(--key); outline: none; }
+  .steps-nav b { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--paper); font: 700 14px var(--mono); }
+
+  /* ---------- steps ---------- */
+  .step { padding-block: 48px 8px; display: grid; gap: 22px; }
+  .step + .step, .extra { border-top: 1px solid var(--line); }
+  .step-head { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+  .step-no { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: var(--ink); color: var(--paper); font: 700 24px var(--mono); }
+  h2 { font-size: 26px; font-weight: 900; letter-spacing: -0.01em; }
+  .step-head p { color: var(--muted); margin-top: 2px; }
+  .points { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .points li { position: relative; padding-left: 22px; }
+  .points li::before { content: ""; position: absolute; left: 4px; top: 0.72em; width: 7px; height: 7px; border-radius: 50%; background: var(--rec); }
+  .ui { font-weight: 700; padding: 1px 7px; border-radius: 6px; background: var(--soft-key); color: var(--key); white-space: nowrap; }
+
+  /* ---------- screenshots with pins ---------- */
+  .shot { margin: 0; display: grid; gap: 14px; }
+  .shot-title { font-size: 14px; font-weight: 700; color: var(--muted); }
+  .frame { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
+  .frame img { width: 100%; }
+  .pin {
+    position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--rec); color: #fff; font: 700 14px var(--mono);
+    box-shadow: 0 0 0 3px #fff, 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 22px; font-size: 15px; }
+  .legend li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; }
+  .legend .n { width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; display: grid; place-items: center; background: var(--rec); color: #fff; font: 700 12px var(--mono); }
+  .legend span { color: var(--muted); }
+  .legend b { color: var(--ink); }
+
+  /* ---------- scene layouts ---------- */
+  .layouts-title { font-weight: 700; }
+  .layouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .lay { display: grid; grid-template-columns: 76px 1fr; gap: 14px; align-items: center; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .lay b { display: inline-block; font-size: 13px; color: #fff; padding: 0 8px; border-radius: 6px; margin-bottom: 2px; }
+  .lay span { display: block; font-size: 14px; color: var(--muted); line-height: 1.5; }
+  .mini { position: relative; width: 76px; height: 43px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+  .mini .ln { position: absolute; left: 9px; height: 4px; border-radius: 2px; background: #b8c0d0; }
+  .mini .pip { position: absolute; right: 5px; bottom: 5px; width: 20px; height: 15px; border-radius: 4px; background: #5c6c8d; }
+  .mini.slide { background: #fff; }
+  .mini.slide::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--t-slide); }
+  .mini.demo { background: #eef1f6; }
+  .mini.demo::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 8px; background: #d6dbe5; }
+  .mini.video { background: #1f2229; display: grid; place-items: center; }
+  .mini.video::after { content: ""; border-left: 12px solid #fff; border-top: 7px solid transparent; border-bottom: 7px solid transparent; margin-left: 4px; }
+  .mini.face { background: #d7deea; }
+  .mini.face::before { content: ""; position: absolute; left: 50%; top: 7px; width: 15px; height: 15px; margin-left: -7.5px; border-radius: 50%; background: #5c6c8d; }
+  .mini.face::after { content: ""; position: absolute; left: 50%; bottom: -12px; width: 40px; height: 26px; margin-left: -20px; border-radius: 50%; background: #4b5b7b; }
+  .t-slide { background: var(--t-slide); }
+  .t-demo { background: var(--t-demo); }
+  .t-video { background: var(--t-video); }
+  .t-face { background: var(--t-face); }
+
+  /* ---------- remote keys ---------- */
+  .remote { display: grid; gap: 14px; padding: 22px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .remote h3 { font-size: 19px; font-weight: 900; }
+  .keys { display: grid; gap: 10px; }
+  .key { display: grid; grid-template-columns: 72px 1fr; gap: 16px; align-items: center; }
+  .cap {
+    width: 72px; height: 60px; border-radius: 14px; display: grid; place-items: center;
+    background: var(--cap); color: var(--ink); border: 1px solid var(--line);
+    font: 700 24px var(--mono); box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.14), 0 2px 0 rgba(0, 0, 0, 0.06);
+  }
+  .cap.next { background: var(--key); color: #fff; border-color: transparent; box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.25), 0 2px 0 rgba(0, 0, 0, 0.08); }
+  .key strong { font-size: 18px; }
+  .key p { color: var(--muted); font-size: 15px; }
+  .key small { display: block; font: 500 12.5px var(--mono); color: var(--muted); margin-top: 2px; }
+  .tip { padding: 12px 16px; border-radius: 12px; background: var(--soft-rec); color: var(--ink); font-size: 15px; }
+  .tip b { color: var(--rec); }
+
+  /* ---------- prompter ---------- */
+  .pair { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+  .pair p { color: var(--muted); font-size: 15px; }
+  .pair p b { color: var(--ink); }
+
+  /* ---------- checklist, FAQ, setup ---------- */
+  .extra { padding-block: 44px 8px; display: grid; gap: 18px; }
+  .extra h2 { font-size: 22px; }
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); font-size: 15px; }
+  .checks li::before { content: ""; width: 18px; height: 18px; margin-top: 3px; border-radius: 5px; border: 2px solid var(--muted); }
+  .checks span { display: block; color: var(--muted); font-size: 14px; }
+  .faq { margin: 0; display: grid; gap: 4px; }
+  .faq div { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .faq dt { font-weight: 700; }
+  .faq dt::before { content: "Q "; font-family: var(--mono); color: var(--rec); }
+  .faq dd { margin: 4px 0 0; color: var(--muted); }
+  .setup { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; counter-reset: s; }
+  .setup li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; counter-increment: s; }
+  .setup li::before { content: counter(s); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--paper); font: 700 13px var(--mono); }
+  .setup code { font: 500 14px var(--mono); padding: 1px 6px; border-radius: 6px; background: var(--cap); }
+  .note { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 600px) {
+    .wrap { padding-block: 32px 56px; }
+    .steps-nav, .legend, .layouts, .checks, .pair { grid-template-columns: 1fr; }
+    .pin { width: 22px; height: 22px; margin: -11px 0 0 -11px; font-size: 12px; box-shadow: 0 0 0 2px #fff, 0 3px 8px rgba(0, 0, 0, 0.3); }
+    .step-no { width: 44px; height: 44px; font-size: 20px; border-radius: 14px; }
+    h2 { font-size: 23px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow"><span class="rec-dot"></span>강의 스튜디오 사용법</p>
+    <h1>슬라이드를 넘기듯 말하면, 편집된 강의 영상이 나옵니다</h1>
+    <p class="lead">맥북과 크롬에서 씁니다. 큐시트를 만들고, 리모컨으로 촬영하고, 버튼 하나로 MP4를 만듭니다.</p>
+    <nav class="steps-nav" aria-label="단계">
+      <a href="#step1"><b>1</b>큐시트 만들기</a>
+      <a href="#step2"><b>2</b>촬영하기</a>
+      <a href="#step3"><b>3</b>영상 만들기</a>
+    </nav>
+  </header>
+
+  <section class="step" id="step1">
+    <div class="step-head">
+      <span class="step-no">1</span>
+      <div><h2>큐시트 만들기</h2><p>강의 순서표를 만들고, 장면마다 할 말을 적어 둡니다.</p></div>
+    </div>
+    <ul class="points">
+      <li><span class="ui">슬라이드 가져오기</span>로 PDF나 PPT 파일을 올립니다. 화면에 끌어다 놓아도 됩니다.</li>
+      <li>PPT의 <b>발표자 노트가 대본</b>으로 들어갑니다. 대본 칸에서 바로 고칠 수 있습니다.</li>
+      <li>장면 사이에 마우스를 올리면 <span class="ui">+ 여기에 장면 추가</span>가 나옵니다. 데모 · 영상 · 얼굴 장면을 넣으세요.</li>
+    </ul>
+    <figure class="shot">
+      <div class="frame">
+        <img src="guide/cuesheet.webp" width="1440" height="900" alt="큐시트 화면: 슬라이드 가져오기 버튼과 장면별 대본 칸">
+        <span class="pin" style="left:9.9%;top:13.6%">1</span>
+        <span class="pin" style="left:88.3%;top:56.5%">2</span>
+        <span class="pin" style="left:12.1%;top:65.8%">3</span>
+        <span class="pin" style="left:94.8%;top:9.2%">4</span>
+      </div>
+      <ol class="legend">
+        <li><i class="n">1</i><div><b>슬라이드 가져오기</b> <span>PDF · PPT · PPTX</span></div></li>
+        <li><i class="n">2</i><div><b>대본</b> <span>촬영 중 프롬프터에 그대로 뜹니다</span></div></li>
+        <li><i class="n">3</i><div><b>장면 추가</b> <span>데모 · 영상 · 얼굴</span></div></li>
+        <li><i class="n">4</i><div><b>촬영하기</b> <span>다 적었으면 여기로</span></div></li>
+      </ol>
+    </figure>
+    <p class="layouts-title">장면은 완성 영상에서 이렇게 나옵니다</p>
+    <div class="layouts">
+      <div class="lay"><div class="mini slide"><i class="ln" style="top:9px;width:34px"></i><i class="ln" style="top:18px;width:24px"></i><i class="pip"></i></div><div><b class="t-slide">슬라이드</b><span>슬라이드 + 얼굴 창</span></div></div>
+      <div class="lay"><div class="mini demo"><i class="ln" style="top:14px;width:30px"></i><i class="ln" style="top:23px;width:20px"></i><i class="pip"></i></div><div><b class="t-demo">데모</b><span>데모 탭 화면 + 얼굴 창</span></div></div>
+      <div class="lay"><div class="mini video"></div><div><b class="t-video">영상</b><span>데모 탭에서 튼 영상 (유튜브 등)</span></div></div>
+      <div class="lay"><div class="mini face"></div><div><b class="t-face">얼굴</b><span>얼굴 전체 화면 (인사 · 마무리)</span></div></div>
+    </div>
+  </section>
+
+  <section class="step" id="step2">
+    <div class="step-head">
+      <span class="step-no">2</span>
+      <div><h2>촬영하기</h2><p>준비 화면에서 네 가지를 확인하고 녹화를 시작합니다.</p></div>
+    </div>
+    <figure class="shot">
+      <div class="frame">
+        <img src="guide/setup.webp" width="1440" height="900" alt="촬영 준비 화면: 카메라 미리보기와 준비 항목">
+        <span class="pin" style="left:57.9%;top:18.2%">1</span>
+        <span class="pin" style="left:57.9%;top:45.6%">2</span>
+        <span class="pin" style="left:57.9%;top:62.3%">3</span>
+        <span class="pin" style="left:57.9%;top:78.4%">4</span>
+      </div>
+      <ol class="legend">
+        <li><i class="n">1</i><div><b>카메라 · 마이크</b> <span>맥북 카메라나 아이폰</span></div></li>
+        <li><i class="n">2</i><div><b>데모 탭 연결</b> <span>데모에 쓸 크롬 탭을 고르고 <b>탭 오디오도 공유</b>를 켭니다</span></div></li>
+        <li><i class="n">3</i><div><b>프롬프터 창</b> <span>카메라 바로 아래로 옮겨 두세요</span></div></li>
+        <li><i class="n">4</i><div><b>녹화 시작</b> <span>3, 2, 1 뒤에 시작합니다</span></div></li>
+      </ol>
+    </figure>
+
+    <div class="remote">
+      <h3>리모컨은 세 개만 기억하세요</h3>
+      <div class="keys">
+        <div class="key"><span class="cap next" aria-hidden="true">▶</span><div><strong>다음</strong><p>지금 장면을 마치고 다음 장면으로 넘어갑니다.</p><small>리모컨 ▶ · 키보드 → 또는 스페이스</small></div></div>
+        <div class="key"><span class="cap" aria-hidden="true">◀</span><div><strong>다시</strong><p>방금 장면을 처음부터 다시 찍습니다.</p><small>리모컨 ◀ · 키보드 ←</small></div></div>
+        <div class="key"><span class="cap" aria-hidden="true">B</span><div><strong>일시정지</strong><p>잠깐 멈췄다가 같은 장면을 이어서 찍습니다.</p><small>키보드 B</small></div></div>
+      </div>
+      <p class="tip"><b>틀려도 멈추지 마세요.</b> ◀ 한 번이면 그 장면만 다시 찍고, 틀린 부분은 영상에서 빠집니다.</p>
+    </div>
+
+    <figure class="shot">
+      <p class="shot-title">촬영 중 화면</p>
+      <div class="frame">
+        <img src="guide/live.webp" width="1440" height="900" alt="촬영 중 화면: 대본, 슬라이드, 장면 목록, 조작 버튼">
+        <span class="pin" style="left:7%;top:18.6%">1</span>
+        <span class="pin" style="left:78.6%;top:14%">2</span>
+        <span class="pin" style="left:95.1%;top:10.2%">3</span>
+      </div>
+      <ol class="legend">
+        <li><i class="n">1</i><div><b>대본</b> <span>지금 장면에서 할 말</span></div></li>
+        <li><i class="n">2</i><div><b>장면 목록</b> <span>누르면 그 장면으로 가서 찍습니다</span></div></li>
+        <li><i class="n">3</i><div><b>녹화 종료</b> <span>끝나면 누릅니다. 1초마다 저장되고 있습니다</span></div></li>
+      </ol>
+    </figure>
+
+    <div class="pair">
+      <div class="frame"><img src="guide/prompter.webp" width="1520" height="660" alt="프롬프터 창: 대본과 다시, 일시정지, 다음 버튼"></div>
+      <p><b>프롬프터 창</b>은 데모 중에도 맨 위에 떠 있고, 영상에는 찍히지 않습니다. 데모 중에는 리모컨 대신 이 창의 <b>다음</b>을 누르세요.</p>
+    </div>
+  </section>
+
+  <section class="step" id="step3">
+    <div class="step-head">
+      <span class="step-no">3</span>
+      <div><h2>영상 만들기</h2><p>버튼 하나면 됩니다.</p></div>
+    </div>
+    <ul class="points">
+      <li><span class="ui">MP4 만들기</span>를 누르면 NG를 빼고 슬라이드 · 데모 · 얼굴을 합칩니다.</li>
+      <li>얼굴 창의 <b>위치와 크기</b>를 고를 수 있습니다.</li>
+      <li>마음에 안 드는 테이크는 <span class="ui">제외</span>하세요. 그 전 테이크가 대신 들어갑니다.</li>
+    </ul>
+    <figure class="shot">
+      <div class="frame">
+        <img src="guide/export.webp" width="1440" height="1060" alt="영상 만들기 화면: 얼굴 창 설정, MP4 만들기 버튼, 완성 영상">
+        <span class="pin" style="left:10.2%;top:21.6%">1</span>
+        <span class="pin" style="left:76.3%;top:16.9%">2</span>
+        <span class="pin" style="left:11.2%;top:33%">3</span>
+        <span class="pin" style="left:35.8%;top:92.8%">4</span>
+      </div>
+      <ol class="legend">
+        <li><i class="n">1</i><div><b>얼굴 창 위치 · 크기</b> <span>네 모서리 중 하나</span></div></li>
+        <li><i class="n">2</i><div><b>MP4 만들기</b> <span>몇 분 걸릴 수 있습니다</span></div></li>
+        <li><i class="n">3</i><div><b>완성 영상</b> <span>1080p MP4, 바로 확인하고 받기</span></div></li>
+        <li><i class="n">4</i><div><b>제외</b> <span>이 테이크 대신 그 전 테이크를 씁니다</span></div></li>
+      </ol>
+    </figure>
+  </section>
+
+  <section class="extra" id="check">
+    <h2>촬영 전 30초 체크</h2>
+    <ul class="checks">
+      <li><div>이어폰을 꼈나요?<span>영상 소리가 마이크에 섞이지 않습니다</span></div></li>
+      <li><div>방해금지 모드를 켰나요?<span>알림 소리가 녹음되지 않습니다</span></div></li>
+      <li><div>탭 오디오 공유를 켰나요?<span>유튜브 소리가 영상에 들어갑니다</span></div></li>
+      <li><div>프롬프터 창이 카메라 아래에 있나요?<span>대본을 읽어도 시선이 카메라로 갑니다</span></div></li>
+    </ul>
+  </section>
+
+  <section class="extra" id="faq">
+    <h2>이럴 땐 이렇게</h2>
+    <dl class="faq">
+      <div><dt>말하다 틀렸어요</dt><dd>◀ 다시를 누르세요. 그 장면만 처음부터 다시 찍고, 틀린 부분은 영상에서 빠집니다.</dd></div>
+      <div><dt>나눠서 찍어도 되나요?</dt><dd>네. 촬영하기를 누르면 빠진 장면부터 이어서 찍습니다. 여러 날 나눠 찍어도 됩니다.</dd></div>
+      <div><dt>슬라이드에 오타가 있어요</dt><dd>고친 파일을 다시 가져온 뒤 MP4 만들기만 다시 누르세요. 다시 찍지 않아도 됩니다.</dd></div>
+      <div><dt>녹화 중에 창이 꺼졌어요</dt><dd>1초마다 저장되고 있었습니다. 다시 열어 이어서 찍으면 되고, 찍던 장면도 영상에 들어갑니다.</dd></div>
+      <div><dt>유튜브 소리가 안 들어갔어요</dt><dd>데모 탭을 연결할 때 탭 오디오도 공유를 켜야 합니다. 연결을 끊고 다시 연결하세요.</dd></div>
+      <div><dt>완성 영상은 어디 있나요?</dt><dd>영상 만들기 화면에서 Finder에서 보기를 누르세요.</dd></div>
+    </dl>
+  </section>
+
+  <section class="extra" id="setup">
+    <h2>처음 한 번만</h2>
+    <ol class="setup">
+      <li><div><b>Google Chrome</b>과 <b>Node.js</b>를 설치합니다. Node.js는 nodejs.org에서 LTS 버전을 받습니다.</div></li>
+      <li><div>강의 스튜디오 폴더에서 <code>강의스튜디오 실행</code>을 더블클릭합니다. 처음에는 우클릭 → 열기를 누르세요.</div></li>
+      <li><div>크롬이 열리면 준비 끝입니다. 끌 때는 터미널 창을 닫습니다.</div></li>
+    </ol>
+    <p class="note">사파리에서는 동작하지 않습니다. 꼭 크롬으로 여세요.</p>
+  </section>
+
+  <footer>강의 스튜디오</footer>
+</div>
+<!-- guide:end -->
+</body>
+</html>

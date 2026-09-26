@@ -107,7 +107,7 @@ export async function renderStudio(root, { pid, params }) {
         <header class="studio-top">
           <a class="link" href="#/p/${pid}">← 큐시트</a>
           <div class="studio-title">${project.title}</div>
-          <span></span>
+          <a class="help-link" href="/guide.html" target="_blank" rel="noopener">사용법</a>
         </header>
         <div class="setup">
           <div class="setup-preview">

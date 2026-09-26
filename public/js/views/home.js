@@ -5,7 +5,7 @@ export async function renderHome(root) {
   const [health, projects] = await Promise.all([api.health().catch(() => null), api.listProjects()]);
 
   root.innerHTML = String(html`
-    <header class="topbar"><a class="brand" href="#/">● 강의 스튜디오</a></header>
+    <header class="topbar"><a class="brand" href="#/">● 강의 스튜디오</a><span class="grow"></span><a class="help-link" href="/guide.html" target="_blank" rel="noopener">사용법</a></header>
     <main class="page narrow">
       ${/Chrome\//.test(navigator.userAgent) ? '' : html`
         <div class="notice error">이 도구는 <b>Google Chrome</b>에서만 제대로 동작합니다. 크롬에서 <code>${location.origin}</code> 을 열어 주세요.</div>`}

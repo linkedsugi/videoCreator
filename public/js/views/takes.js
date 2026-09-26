@@ -71,6 +71,7 @@ export async function renderTakes(root, { pid }) {
         <a class="brand" href="#/">● 강의 스튜디오</a>
         <a class="link" href="#/p/${pid}">← ${project.title}</a>
         <span class="grow"></span>
+        <a class="help-link" href="/guide.html" target="_blank" rel="noopener">사용법</a>
         <a class="btn rec" href="#/p/${pid}/studio">● 촬영하기</a>
       </header>
       <main class="page">
