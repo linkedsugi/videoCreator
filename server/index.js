@@ -1,10 +1,12 @@
 import http from 'node:http';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import express from 'express';
 import { Store, HttpError } from './store.js';
 import { BuildManager } from './build/manager.js';
+import { SlideConverter } from './convert.js';
 import { findFfmpeg } from './build/ffmpeg.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -13,11 +15,12 @@ function bodyBuffer(req) {
   return Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
 }
 
-export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg } = {}) {
+export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg, converter } = {}) {
   const store = new Store(dataDir);
   await store.init();
   const ff = ffmpeg === undefined ? await findFfmpeg() : ffmpeg;
   const builds = new BuildManager({ store, ffmpeg: ff });
+  const slides = converter ?? new SlideConverter(path.join(store.dataDir, '_convert'));
 
   const app = express();
   app.disable('x-powered-by');
@@ -25,8 +28,29 @@ export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg 
   const binary = (limit) => express.raw({ type: () => true, limit });
 
   const api = express.Router();
-  api.get('/health', (req, res) => {
-    res.json({ ok: true, platform: process.platform, ffmpeg: ff ? { version: ff.version, encoder: ff.h264 } : null });
+  api.get('/health', async (req, res) => {
+    res.json({
+      ok: true,
+      platform: process.platform,
+      ffmpeg: ff ? { version: ff.version, encoder: ff.h264 } : null,
+      converters: await slides.available(),
+    });
+  });
+
+  // PowerPoint file → PDF (slide images) or .pptx (speaker notes of old .ppt files).
+  api.post('/convert', binary('500mb'), async (req, res) => {
+    const to = req.query.to === 'pptx' ? 'pptx' : 'pdf';
+    const ext = path.extname(String(req.query.name ?? '')).toLowerCase();
+    if (ext !== '.pptx' && ext !== '.ppt') throw new HttpError(400, 'PowerPoint 파일(.pptx, .ppt)만 변환할 수 있습니다.');
+    const data = bodyBuffer(req);
+    if (!data.length) throw new HttpError(400, '빈 파일입니다.');
+    const { file, via } = await slides.convert(data, ext, to);
+    res.setHeader('X-Converted-By', via);
+    res.type(to === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    res.sendFile(file, { dotfiles: 'allow' }, (err) => {
+      fsp.rm(file, { force: true });
+      if (err && !res.headersSent) res.status(500).json({ error: `변환한 파일을 보내지 못했습니다: ${err.message}` });
+    });
   });
 
   api.get('/projects', async (req, res) => res.json(await store.listProjects()));
@@ -96,7 +120,7 @@ export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg 
   app.use('/data', express.static(store.dataDir, { setHeaders: noCache, dotfiles: 'ignore' }));
   app.use(staticDir('public'));
 
-  return { app, store, builds, ffmpeg: ff };
+  return { app, store, builds, ffmpeg: ff, converter: slides };
 }
 
 function openBrowser(url) {

@@ -34,6 +34,24 @@ export const api = {
   startBuild: (pid) => request('POST', `${P(pid)}/build`),
   buildStatus: (pid) => request('GET', `${P(pid)}/build`),
   openFolder: (pid, target) => request('POST', `${P(pid)}/open`, { target }),
+  /** Converts a PowerPoint file on this Mac. Resolves { blob, via }. */
+  convert: async (file, to) => {
+    let res;
+    try {
+      res = await fetch(`/api/convert?to=${to}&name=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+        headers: { 'Content-Type': 'application/octet-stream' },
+      });
+    } catch {
+      throw new Error('서버에 연결할 수 없습니다. 터미널에서 npm start가 실행 중인지 확인해 주세요.');
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `변환 실패 (HTTP ${res.status})`);
+    }
+    return { blob: await res.blob(), via: res.headers.get('X-Converted-By') };
+  },
   chunkUrl: (pid, sid, file, seq) => `${P(pid)}/sessions/${sid}/tracks/${file}/chunks?seq=${seq}`,
   eventUrl: (pid, sid, seq) => `${P(pid)}/sessions/${sid}/events?seq=${seq}`,
 };

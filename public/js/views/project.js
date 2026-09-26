@@ -4,8 +4,12 @@ import { api } from '../api.js';
 import { html, $, $$, debounce, toast, autoGrow } from '../ui.js';
 import { CUE_TYPES, newCueId, cueTitle, showFaceOf, slideUrl } from '../cues.js';
 
+const DECK_ACCEPT = '.pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint';
+const CONVERTER_NAMES = { powerpoint: 'PowerPoint', keynote: 'Keynote', libreoffice: 'LibreOffice' };
+
 export async function renderProject(root, { pid }) {
   let project = await api.getProject(pid);
+  const health = await api.health().catch(() => null);
   const summary = await api.getTakes(pid).catch(() => ({ cues: {} }));
   const goodTakes = (id) => (summary.cues?.[id] ?? []).filter((t) => !t.ng && !t.tooShort && !t.excluded).length;
 
@@ -62,7 +66,7 @@ export async function renderProject(root, { pid }) {
           <div class="cue-head">
             <span class="type-badge t-${cue.type}">${CUE_TYPES[cue.type].label}</span>
             ${cue.type === 'slide'
-              ? html`<span class="cue-title">슬라이드 ${cue.page}</span>`
+              ? html`<span class="cue-title">슬라이드 ${cue.page}</span>${cue.title ? html`<span class="cue-subtitle">${cue.title}</span>` : ''}`
               : html`<input class="cue-title-input" data-field="title" value="${cue.title}" placeholder="${cueTitle(cue)} 제목" maxlength="200">`}
             ${cue.type !== 'face' ? html`<label class="check small" title="완성 영상에서 얼굴 창을 보여줄지"><input type="checkbox" data-field="showFace" ${showFaceOf(cue) ? 'checked' : ''}> 얼굴 창</label>` : ''}
             <span class="grow"></span>
@@ -103,18 +107,18 @@ export async function renderProject(root, { pid }) {
       <main class="page">
         <section class="import-bar">
           <div class="import-item">
-            <button class="btn" id="pdf-btn">슬라이드 PDF 가져오기</button>
-            <span class="muted small">${slideCount ? `슬라이드 ${slideCount}장 · 고친 PDF를 다시 가져오면 이미지만 바뀝니다` : 'PowerPoint·Keynote·구글 슬라이드에서 PDF로 내보내세요'}</span>
+            <button class="btn primary" id="import-btn">슬라이드 가져오기</button>
+            <span class="muted small">${importHint(slideCount)}</span>
           </div>
           <div class="import-item">
             <button class="btn" id="notes-btn" ${slideCount ? '' : 'disabled'}>발표자 노트 → 대본</button>
-            <span class="muted small">같은 발표 파일을 .pptx로 올리면 노트를 대본으로 채웁니다</span>
+            <span class="muted small">PDF로 가져왔다면, 같은 발표 파일(.pptx, .ppt)에서 대본만 채웁니다</span>
           </div>
           <div class="import-item">
             <button class="btn" id="paste-btn" ${cues.length ? '' : 'disabled'}>대본 한꺼번에 붙여넣기</button>
           </div>
-          <input type="file" id="pdf-file" accept="application/pdf,.pdf" hidden>
-          <input type="file" id="notes-file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" hidden>
+          <input type="file" id="import-file" accept="${DECK_ACCEPT}" multiple hidden>
+          <input type="file" id="notes-file" accept=".pptx,.ppt" hidden>
         </section>
         <div class="progress-line" id="import-progress" hidden><div class="bar"><div class="bar-fill"></div></div><span class="label"></span></div>
 
@@ -193,8 +197,8 @@ export async function renderProject(root, { pid }) {
       project.title = e.target.value;
       changed();
     });
-    $('#pdf-btn').addEventListener('click', () => $('#pdf-file').click());
-    $('#pdf-file').addEventListener('change', (e) => e.target.files[0] && importPdf(e.target.files[0]));
+    $('#import-btn').addEventListener('click', () => $('#import-file').click());
+    $('#import-file').addEventListener('change', (e) => e.target.files.length && importFiles(e.target.files));
     $('#notes-btn').addEventListener('click', () => $('#notes-file').click());
     $('#notes-file').addEventListener('change', (e) => e.target.files[0] && importNotes(e.target.files[0]));
     $('#paste-btn').addEventListener('click', () => $('#paste-dialog').showModal());
@@ -245,39 +249,84 @@ export async function renderProject(root, { pid }) {
     });
   }
 
-  function showProgress(fraction, label) {
+  function showProgress(label, fraction = null) {
     const box = $('#import-progress');
     if (!box) return;
-    box.hidden = fraction == null;
-    if (fraction == null) return;
-    box.querySelector('.bar-fill').style.width = `${Math.round(fraction * 100)}%`;
+    box.hidden = false;
+    box.querySelector('.bar').classList.toggle('busy', fraction === null);
+    box.querySelector('.bar-fill').style.width = fraction === null ? '' : `${Math.round(fraction * 100)}%`;
     box.querySelector('.label').textContent = label;
   }
 
-  async function importPdf(file) {
-    const { renderPdfPages } = await import('../importers/pdf.js');
+  function hideProgress() {
+    const box = $('#import-progress');
+    if (box) box.hidden = true;
+    for (const id of ['#import-file', '#notes-file']) if ($(id)) $(id).value = '';
+  }
+
+  function importHint(slideCount) {
+    if (slideCount) return `슬라이드 ${slideCount}장 · 고친 파일을 다시 가져오면 이미지만 바뀝니다`;
+    const hint = 'PDF 또는 PowerPoint(.pptx, .ppt) · 여기에 파일을 끌어다 놓아도 됩니다';
+    return health?.converters?.length ? hint : `${hint} · PowerPoint 파일은 PowerPoint나 Keynote가 있어야 바로 열 수 있습니다`;
+  }
+
+  /**
+   * Imports slides from a PDF and/or a PowerPoint file. A PowerPoint file on
+   * its own is converted on this Mac; with both, the PDF gives the images and
+   * the PowerPoint file the titles and speaker notes.
+   */
+  async function importFiles(fileList) {
+    const files = [...fileList];
+    const pdf = files.find((f) => /\.pdf$/i.test(f.name));
+    const deck = files.find((f) => /\.pptx?$/i.test(f.name));
+    if (!pdf && !deck) {
+      toast('PDF 또는 PowerPoint 파일(.pptx, .ppt)을 골라 주세요.', 'warn');
+      return;
+    }
     await saveNow();
     try {
-      showProgress(0, 'PDF 여는 중…');
-      await api.beginSlides(pid);
-      const count = await renderPdfPages(file, async (n, blob, total) => {
-        await api.putStagedSlide(pid, n, blob);
-        showProgress(n / total, `슬라이드 ${n}/${total}장 가져오는 중…`);
-      });
-      const updated = await api.commitSlides(pid, count);
-      project.slides = updated.slides;
-      const added = mergeSlideCues(count);
+      let source = pdf;
+      let via = null;
+      if (!source) {
+        showProgress(`${deck.name}을(를) 슬라이드 이미지로 바꾸는 중… 처음 한 번은 PowerPoint·Keynote의 "제어 허용"이나 "파일 접근 권한" 창이 뜰 수 있습니다. 허용해 주세요.`);
+        ({ blob: source, via } = await api.convert(deck, 'pdf'));
+      }
+      const { count, added } = await importSlideImages(source);
+      let deckResult = { msg: '', warn: false };
+      if (deck) {
+        try {
+          deckResult = await applyDeck(deck);
+        } catch (err) {
+          deckResult = { msg: ` 발표자 노트는 읽지 못했습니다: ${err.message}`, warn: true };
+        }
+      }
       dirty = true;
       await saveNow();
       render();
       const missing = project.cues.filter((c) => c.type === 'slide' && c.page > count).length;
-      toast(`슬라이드 ${count}장을 가져왔습니다${added ? ` (새 장면 ${added}개)` : ''}.${missing ? ` 없어진 슬라이드 장면 ${missing}개를 확인하세요.` : ''}`, missing ? 'warn' : 'info', 7000);
+      const parts = [`슬라이드 ${count}장을 가져왔습니다${added ? ` (새 장면 ${added}개)` : ''}${via ? ` · ${CONVERTER_NAMES[via] ?? via}로 변환` : ''}.`];
+      if (deckResult.msg) parts.push(deckResult.msg.trim());
+      if (missing) parts.push(`없어진 슬라이드 장면 ${missing}개를 확인하세요.`);
+      toast(parts.join(' '), missing || deckResult.warn ? 'warn' : 'info', 9000);
     } catch (err) {
-      toast(`PDF를 가져오지 못했습니다: ${err.message}`, 'error', 8000);
+      const tip = deck && !pdf ? '\nPowerPoint에서 PDF로 저장한 뒤, PDF와 PowerPoint 파일을 함께 골라도 됩니다.' : '';
+      toast(`슬라이드를 가져오지 못했습니다: ${err.message}${tip}`, 'error', 15000);
     } finally {
-      showProgress(null);
-      $('#pdf-file') && ($('#pdf-file').value = '');
+      hideProgress();
     }
+  }
+
+  async function importSlideImages(pdfFile) {
+    const { renderPdfPages } = await import('../importers/pdf.js');
+    showProgress('PDF 여는 중…', 0);
+    await api.beginSlides(pid);
+    const count = await renderPdfPages(pdfFile, async (n, blob, total) => {
+      await api.putStagedSlide(pid, n, blob);
+      showProgress(`슬라이드 ${n}/${total}장 가져오는 중…`, n / total);
+    });
+    const updated = await api.commitSlides(pid, count);
+    project.slides = updated.slides;
+    return { count, added: mergeSlideCues(count) };
   }
 
   /** Adds a cue for each page that doesn't have one yet, after the previous page. */
@@ -296,33 +345,55 @@ export async function renderProject(root, { pid }) {
     return added;
   }
 
+  /**
+   * Takes slide titles and speaker notes from a PowerPoint file. Titles always
+   * follow the deck; scripts someone already wrote are only replaced after asking.
+   */
+  async function applyDeck(file) {
+    const { readPptxSlides, matchSlidesToPages } = await import('../importers/pptx.js');
+    let pptx = file;
+    if (!/\.pptx$/i.test(file.name)) {
+      showProgress('.ppt 파일에서 발표자 노트를 읽는 중…');
+      pptx = (await api.convert(file, 'pptx')).blob;
+    }
+    const deckSlides = await readPptxSlides(pptx);
+    const count = project.slides?.count ?? 0;
+    const { list, exact } = matchSlidesToPages(deckSlides, count);
+    const slideCues = project.cues.filter((c) => c.type === 'slide');
+    for (const cue of slideCues) {
+      const slide = list[cue.page - 1];
+      if (slide) cue.title = slide.title;
+    }
+    const withNotes = slideCues.filter((c) => list[c.page - 1]?.notes);
+    const conflicts = withNotes.filter((c) => c.script?.trim() && c.script.trim() !== list[c.page - 1].notes);
+    const overwrite = conflicts.length === 0 || confirm(
+      `대본이 이미 있는 장면이 ${conflicts.length}개 있습니다.\n[확인] 발표자 노트로 덮어쓰기\n[취소] 비어 있는 장면만 채우기`,
+    );
+    let applied = 0;
+    for (const cue of withNotes) {
+      const notes = list[cue.page - 1].notes;
+      if (cue.script === notes || (!overwrite && cue.script?.trim())) continue;
+      cue.script = notes;
+      applied += 1;
+    }
+    let msg = applied ? `대본 ${applied}개를 발표자 노트에서 채웠습니다.` : withNotes.length ? '' : '발표자 노트는 없었습니다.';
+    if (!exact) {
+      const hidden = deckSlides.filter((s) => s.hidden).length;
+      msg += ` 발표 파일은 ${deckSlides.length}장${hidden ? `(숨김 ${hidden}장)` : ''}, 슬라이드 이미지는 ${count}장이라 대본 순서가 어긋났을 수 있습니다.`;
+    }
+    return { msg: msg.trim(), warn: !exact };
+  }
+
   async function importNotes(file) {
     try {
-      const { readPptxNotes } = await import('../importers/pptx.js');
-      const notes = await readPptxNotes(file);
-      const slides = project.cues.filter((c) => c.type === 'slide');
-      const filled = slides.filter((c) => c.script?.trim());
-      const overwrite = filled.length === 0 || confirm(
-        `대본이 이미 있는 장면이 ${filled.length}개 있습니다.\n[확인] 발표자 노트로 덮어쓰기\n[취소] 비어 있는 장면만 채우기`,
-      );
-      let applied = 0;
-      for (const cue of slides) {
-        const text = notes[cue.page - 1]?.trim();
-        if (!text || (!overwrite && cue.script?.trim())) continue;
-        cue.script = text;
-        applied += 1;
-      }
+      const { msg, warn } = await applyDeck(file);
       changed();
       render();
-      const count = project.slides?.count ?? 0;
-      const mismatch = notes.length !== count
-        ? ` PPTX는 ${notes.length}장, PDF는 ${count}장입니다. 숨긴 슬라이드 때문에 번호가 어긋났는지 확인하세요.`
-        : '';
-      toast(`대본 ${applied}개를 채웠습니다.${mismatch}`, mismatch ? 'warn' : 'info', mismatch ? 10000 : 4000);
+      toast(msg || '바뀐 대본이 없습니다.', warn ? 'warn' : 'info', warn ? 10000 : 5000);
     } catch (err) {
-      toast(`발표자 노트를 읽지 못했습니다: ${err.message}`, 'error', 8000);
+      toast(`발표자 노트를 읽지 못했습니다: ${err.message}`, 'error', 10000);
     } finally {
-      $('#notes-file') && ($('#notes-file').value = '');
+      hideProgress();
     }
   }
 
@@ -341,6 +412,31 @@ export async function renderProject(root, { pid }) {
     toast(`대본 ${applied}개를 넣었습니다.${extra}`, extra ? 'warn' : 'info', 6000);
   }
 
+  // Dropping files anywhere on the page imports them.
+  const onDragOver = (e) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    e.preventDefault();
+    root.classList.add('dropping');
+  };
+  const onDragLeave = (e) => {
+    if (!root.contains(e.relatedTarget)) root.classList.remove('dropping');
+  };
+  const onDrop = (e) => {
+    if (!e.dataTransfer?.files?.length) return;
+    e.preventDefault();
+    root.classList.remove('dropping');
+    importFiles(e.dataTransfer.files);
+  };
+  root.addEventListener('dragover', onDragOver);
+  root.addEventListener('dragleave', onDragLeave);
+  root.addEventListener('drop', onDrop);
+
   render();
-  return () => saveNow();
+  return () => {
+    root.removeEventListener('dragover', onDragOver);
+    root.removeEventListener('dragleave', onDragLeave);
+    root.removeEventListener('drop', onDrop);
+    root.classList.remove('dropping');
+    return saveNow();
+  };
 }
