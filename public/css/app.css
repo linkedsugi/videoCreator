@@ -183,6 +183,9 @@ section { margin-bottom: 28px; }
 .export-options { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; grid-column: 1; }
 .export-action { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
 #job { grid-column: 1 / -1; }
+.storage-box { grid-column: 1 / -1; display: grid; gap: 6px; }
+.storage { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 13px; color: var(--muted); padding-top: 12px; border-top: 1px solid var(--line); }
+.storage b { color: var(--text); font-variant-numeric: tabular-nums; }
 .opt { display: grid; gap: 4px; }
 .opt-label { font-size: 13px; font-weight: 600; color: var(--muted); }
 .corner-picker { display: grid; grid-template-columns: repeat(2, 30px); gap: 3px; }

@@ -34,6 +34,8 @@ export const api = {
   startBuild: (pid) => request('POST', `${P(pid)}/build`),
   buildStatus: (pid) => request('GET', `${P(pid)}/build`),
   openFolder: (pid, target) => request('POST', `${P(pid)}/open`, { target }),
+  storage: (pid) => request('GET', `${P(pid)}/storage`),
+  clearCache: (pid) => request('DELETE', `${P(pid)}/cache`),
   /** Converts a PowerPoint file on this Mac. Resolves { blob, via }. */
   convert: async (file, to) => {
     let res;

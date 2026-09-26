@@ -85,6 +85,11 @@ export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg,
   });
 
   api.post('/projects/:pid/build', async (req, res) => res.status(202).json(await builds.start(req.params.pid)));
+  api.get('/projects/:pid/storage', async (req, res) => res.json(await store.storage(req.params.pid)));
+  api.delete('/projects/:pid/cache', async (req, res) => {
+    if (builds.isRunning(req.params.pid)) throw new HttpError(409, '영상을 만드는 중에는 정리할 수 없습니다.');
+    res.json(await store.clearCache(req.params.pid));
+  });
   api.get('/projects/:pid/build', (req, res) => res.json(builds.status(req.params.pid)));
 
   // Opens the project's folder in Finder (macOS only).

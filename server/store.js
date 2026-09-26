@@ -107,6 +107,17 @@ function isPng(buf) {
   return Buffer.isBuffer(buf) && buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
 }
 
+async function dirSize(dir) {
+  let total = 0;
+  const entries = await fsp.readdir(dir, { withFileTypes: true }).catch(() => []);
+  for (const e of entries) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) total += await dirSize(p);
+    else if (e.isFile()) total += (await fsp.stat(p).catch(() => ({ size: 0 }))).size;
+  }
+  return total;
+}
+
 export class Store {
   constructor(dataDir) {
     this.dataDir = path.resolve(dataDir);
@@ -352,6 +363,36 @@ export class Store {
       out.push({ id, dir, events });
     }
     return out;
+  }
+
+  /** Disk use of a project and free space on the disk, in bytes. */
+  async storage(pid) {
+    const dir = this.projectDir(pid);
+    await this.getProject(pid);
+    let free = null;
+    try {
+      const fsStat = await fsp.statfs(this.dataDir);
+      free = fsStat.bavail * fsStat.bsize;
+    } catch {
+      // statfs needs Node 18.15+
+    }
+    return {
+      raw: await dirSize(path.join(dir, 'sessions')),
+      cache: await dirSize(path.join(dir, 'build')),
+      exports: await dirSize(path.join(dir, 'exports')),
+      free,
+    };
+  }
+
+  /**
+   * Deletes the intermediate files of an export. Recordings and finished videos
+   * stay; the next export just takes longer because it prepares them again.
+   */
+  async clearCache(pid) {
+    const dir = path.join(this.projectDir(pid), 'build');
+    const freed = await dirSize(dir);
+    await fsp.rm(dir, { recursive: true, force: true });
+    return { freed };
   }
 
   /**

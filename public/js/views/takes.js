@@ -1,7 +1,7 @@
 // Takes overview and export.
 
 import { api } from '../api.js';
-import { html, $, $$, fmtClock, fmtDateTime, toast } from '../ui.js';
+import { html, $, $$, fmtClock, fmtDateTime, fmtBytes, toast } from '../ui.js';
 import { CUE_TYPES, cueTitle } from '../cues.js';
 
 const REASONS = { retake: 'NG', next: '', jump: '', stop: '', crash: '중단됨', interrupted: '' };
@@ -12,6 +12,7 @@ export async function renderTakes(root, { pid }) {
   let job = await api.buildStatus(pid);
   let poll = null;
   const health = await api.health().catch(() => null);
+  let storage = await api.storage(pid).catch(() => null);
 
   function takeState(t) {
     if (t.chosen) return { label: '사용', cls: 'ok' };
@@ -104,6 +105,7 @@ export async function renderTakes(root, { pid }) {
             ${!health?.ffmpeg ? html`<p class="warn-text small">FFmpeg가 없어 만들 수 없습니다. README를 확인하세요.</p>` : ''}
           </div>
           <div id="job">${jobView()}</div>
+          <div class="storage-box">${storageView()}</div>
         </section>
 
         <section>
@@ -152,7 +154,34 @@ export async function renderTakes(root, { pid }) {
     }
   }
 
+  function storageView() {
+    if (!storage) return '';
+    const low = storage.free != null && storage.free < 20e9;
+    return html`
+      <div class="storage">
+        <span>녹화 원본 <b>${fmtBytes(storage.raw)}</b></span>
+        <span>완성 영상 <b>${fmtBytes(storage.exports)}</b></span>
+        <span>중간 파일 <b>${fmtBytes(storage.cache)}</b>
+          ${storage.cache > 0 ? html`<button class="btn small" id="clear-cache" ${job.state === 'running' ? 'disabled' : ''}>정리</button>` : ''}</span>
+        ${storage.free != null ? html`<span class="grow"></span><span>맥 남은 공간 <b>${fmtBytes(storage.free)}</b></span>` : ''}
+      </div>
+      ${low ? html`<p class="warn-text small">남은 공간이 적습니다. 35분 강의 하나를 만들 때 10GB 넘게 필요할 수 있습니다. 영상을 다 만든 강의는 중간 파일을 정리해 주세요.</p>` : ''}`;
+  }
+
+  async function clearCache() {
+    if (!confirm('중간 파일을 지울까요?\n녹화 원본과 완성 영상은 그대로 남습니다. 다음에 영상을 만들 때는 조금 더 오래 걸립니다.')) return;
+    try {
+      const { freed } = await api.clearCache(pid);
+      storage = await api.storage(pid).catch(() => storage);
+      render();
+      toast(`중간 파일 ${fmtBytes(freed)}를 지웠습니다.`);
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
   function bind() {
+    $('#clear-cache')?.addEventListener('click', clearCache);
     for (const b of $$('[data-corner]')) b.addEventListener('click', () => saveSettings({ pipCorner: b.dataset.corner }));
     for (const b of $$('[data-size]')) b.addEventListener('click', () => saveSettings({ pipSize: b.dataset.size }));
     $('#loudnorm').addEventListener('change', (e) => saveSettings({ loudnorm: e.target.checked }));
@@ -198,6 +227,7 @@ export async function renderTakes(root, { pid }) {
       if (job.state !== 'running') {
         clearInterval(poll);
         poll = null;
+        storage = await api.storage(pid).catch(() => storage);
         render();
         if (job.state === 'done') toast('영상을 만들었습니다.', 'info', 6000);
       }

@@ -85,7 +85,9 @@ export async function findFfmpeg() {
 export function videoEncoderArgs(ff, purpose) {
   const gop = purpose === 'intermediate' ? '30' : '60';
   if (ff.h264 === 'h264_videotoolbox') {
-    const rate = purpose === 'intermediate' ? ['-b:v', '14M'] : ['-b:v', '8M', '-maxrate', '12M', '-bufsize', '16M'];
+    // Slides and a small face window need far less than camera footage; about
+    // 1.3 GB for 35 minutes keeps files uploadable to a university LMS.
+    const rate = purpose === 'intermediate' ? ['-b:v', '12M'] : ['-b:v', '5M', '-maxrate', '8M', '-bufsize', '10M'];
     return ['-c:v', 'h264_videotoolbox', ...rate, '-profile:v', 'high', '-g', gop, '-pix_fmt', 'yuv420p'];
   }
   const crf = purpose === 'intermediate' ? '18' : '20';

@@ -14,7 +14,7 @@ import crypto from 'node:crypto';
 import { parseSession, chooseTakes, planSegments } from './timeline.js';
 import { runFfmpeg, probeMedia, scanDuration, videoEncoderArgs } from './ffmpeg.js';
 
-const BUILD_VERSION = 1;
+const BUILD_VERSION = 2;
 const W = 1920;
 const H = 1080;
 const FPS = 30;
@@ -121,6 +121,9 @@ async function normalizeTrack(ff, { src, kind, outFile, expectedSec, onProgress 
     '-map', '0:v:0', '-map', '0:a:0?',
     '-vf', `${scale},fps=${FPS},format=yuv420p`,
     ...videoEncoderArgs(ff, 'intermediate'),
+    // A dropout in a long recording (e.g. a wireless mic hiccup) leaves a gap in the
+    // sound; filling it with silence keeps everything after it in sync with the picture.
+    '-af', 'aresample=async=1:first_pts=0',
     '-c:a', 'flac', '-ar', String(RATE), '-ac', '2', tmp,
   ], { totalSec: expectedSec, onProgress });
   await fsp.rename(tmp, outFile);

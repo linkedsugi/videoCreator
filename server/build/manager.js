@@ -1,5 +1,14 @@
+import { spawn } from 'node:child_process';
 import { buildProject } from './builder.js';
 import { HttpError } from '../store.js';
+
+/** Keeps a Mac from idle-sleeping while a long export runs. Returns a stop function. */
+function stayAwake() {
+  if (process.platform !== 'darwin') return () => {};
+  const child = spawn('caffeinate', ['-i'], { stdio: 'ignore' });
+  child.on('error', () => {});
+  return () => child.kill();
+}
 
 /** Runs one export at a time and keeps each project's latest job status. */
 export class BuildManager {
@@ -8,6 +17,10 @@ export class BuildManager {
     this.ffmpeg = ffmpeg;
     this.jobs = new Map();
     this.active = null;
+  }
+
+  isRunning(pid) {
+    return this.active?.pid === pid;
   }
 
   status(pid) {
@@ -36,6 +49,7 @@ export class BuildManager {
     };
     this.jobs.set(pid, job);
     this.active = job;
+    const release = stayAwake();
     buildProject({
       store: this.store,
       pid,
@@ -58,6 +72,7 @@ export class BuildManager {
         job.error = err.message;
       })
       .finally(() => {
+        release();
         job.finishedAt = Date.now();
         this.active = null;
       });
