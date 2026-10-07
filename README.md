@@ -26,7 +26,9 @@
    npm install
    ```
 
-   `npm install`이 영상 변환에 쓰는 FFmpeg도 함께 받습니다.
+   `npm install`이 영상 변환에 쓰는 FFmpeg와 배경 지우기 AI도 함께 받습니다.
+
+**새 버전으로 바꿀 때**: 강의 스튜디오 폴더에서 `git pull`을 실행합니다. 그다음 `강의스튜디오 실행.command`로 켜면 새로 필요한 파일을 알아서 설치합니다. 터미널로 켠다면 `npm install` 후 `npm start`를 실행하세요.
 
 > **더 빠르게 (선택)**: Homebrew가 있다면 `brew install ffmpeg`를 한 번 실행하세요. 맥의 하드웨어 인코더를 써서 MP4 만들기가 몇 배 빨라집니다. 설치되어 있으면 자동으로 그쪽을 씁니다.
 

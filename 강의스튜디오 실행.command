@@ -7,8 +7,10 @@ if ! command -v node >/dev/null 2>&1; then
   read -r -p "엔터를 누르면 창을 닫습니다."
   exit 1
 fi
-if [ ! -d node_modules ]; then
-  echo "처음 실행: 필요한 파일을 설치합니다 (1~2분)…"
+# 처음 실행할 때, 그리고 업데이트로 필요한 파일이 바뀌었을 때 설치합니다.
+if [ ! -d node_modules ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
+  echo "필요한 파일을 설치합니다 (1~2분)…"
   npm install || { read -r -p "설치에 실패했습니다. 엔터를 누르면 창을 닫습니다."; exit 1; }
+  touch node_modules/.package-lock.json
 fi
 npm start
