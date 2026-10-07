@@ -50,17 +50,18 @@ async function canEncode(bin, encoder) {
 async function pickH264(bin) {
   const r = await capture(bin, ['-hide_banner', '-encoders']).catch(() => null);
   if (!r || r.code !== 0) return null;
+  const libx264 = r.stdout.includes('libx264');
   if (process.platform === 'darwin' && r.stdout.includes('h264_videotoolbox') && (await canEncode(bin, 'h264_videotoolbox'))) {
-    return 'h264_videotoolbox';
+    return { h264: 'h264_videotoolbox', libx264 };
   }
-  if (r.stdout.includes('libx264') && (await canEncode(bin, 'libx264'))) return 'libx264';
+  if (libx264 && (await canEncode(bin, 'libx264'))) return { h264: 'libx264', libx264 };
   return null;
 }
 
 /**
  * Finds a usable FFmpeg. Homebrew's build is preferred on macOS because it has
  * the hardware H.264 encoder; the bundled ffmpeg-static is the fallback.
- * @returns {Promise<{bin: string, version: string, h264: string} | null>}
+ * @returns {Promise<{bin: string, version: string, h264: string, libx264: boolean} | null>}
  */
 export async function findFfmpeg() {
   const candidates = [];
@@ -75,8 +76,8 @@ export async function findFfmpeg() {
   for (const bin of candidates) {
     const version = await versionOf(bin);
     if (!version) continue;
-    const h264 = await pickH264(bin);
-    if (h264) return { bin, version, h264 };
+    const enc = await pickH264(bin);
+    if (enc) return { bin, version, ...enc };
   }
   return null;
 }
@@ -98,14 +99,18 @@ const PROGRESS_ARGS = ['-progress', 'pipe:1', '-stats_period', '0.5', '-nostats'
 
 function runOnce(ff, args, { totalSec, onProgress, stallMs }) {
   return new Promise((resolve, reject) => {
-    // Progress lines arrive every half second, so silence means FFmpeg is stuck.
+    // Progress lines arrive every half second. FFmpeg can get stuck in two
+    // ways: it goes silent, or it keeps reporting the same position.
     const child = spawn(ff.bin, ['-nostdin', ...PROGRESS_ARGS, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
     let buf = '';
     let lastActivity = Date.now();
+    let lastAdvance = Date.now();
+    let position = -1;
     let stalled = false;
     const watchdog = setInterval(() => {
-      if (Date.now() - lastActivity > stallMs) {
+      const now = Date.now();
+      if (now - lastActivity > stallMs || now - lastAdvance > stallMs) {
         stalled = true;
         child.kill('SIGKILL');
       }
@@ -122,7 +127,13 @@ function runOnce(ff, args, { totalSec, onProgress, stallMs }) {
         const line = buf.slice(0, i);
         buf = buf.slice(i + 1);
         const m = /^out_time_(?:us|ms)=(\d+)/.exec(line);
-        if (m && totalSec > 0 && onProgress) onProgress(Math.min(1, Number(m[1]) / 1e6 / totalSec));
+        if (!m) continue;
+        const at = Number(m[1]);
+        if (at > position) {
+          position = at;
+          lastAdvance = Date.now();
+        }
+        if (totalSec > 0 && onProgress) onProgress(Math.min(1, at / 1e6 / totalSec));
       }
     });
     child.on('error', (err) => {

@@ -15,6 +15,7 @@
   "dependencies": {
     "express": "^5.2.1",
     "jszip": "^3.10.1",
+    "onnxruntime-web": "^1.30.0",
     "pdfjs-dist": "4.10.38"
   },
   "optionalDependencies": {

@@ -79,7 +79,7 @@
   @keyframes blink { 50% { opacity: 0.25; } }
   h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 900; letter-spacing: -0.02em; margin-top: 14px; }
   .lead { margin-top: 14px; font-size: 18px; color: var(--muted); max-width: 34em; }
-  .steps-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 28px; }
+  .steps-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 28px; }
   .steps-nav a { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-weight: 700; }
   .steps-nav a:hover, .steps-nav a:focus-visible { border-color: var(--key); outline: none; }
   .steps-nav b { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--paper); font: 700 14px var(--mono); }
@@ -120,7 +120,11 @@
   .lay span { display: block; font-size: 14px; color: var(--muted); line-height: 1.5; }
   .mini { position: relative; width: 76px; height: 43px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
   .mini .ln { position: absolute; left: 9px; height: 4px; border-radius: 2px; background: #b8c0d0; }
-  .mini .pip { position: absolute; right: 5px; bottom: 5px; width: 20px; height: 15px; border-radius: 4px; background: #5c6c8d; }
+  .mini .who { position: absolute; right: 4px; bottom: 0; width: 26px; height: 30px; }
+  .mini .who::before { content: ""; position: absolute; left: 50%; top: 3px; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: #5c6c8d; }
+  .mini .who::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 26px; height: 14px; margin-left: -13px; border-radius: 13px 13px 0 0; background: #4b5b7b; }
+  .mini .who.small { transform: scale(0.72); transform-origin: right bottom; }
+  .mini .cap { position: absolute; left: 6px; bottom: 6px; width: 24px; height: 6px; border-radius: 1px; background: var(--rec); z-index: 1; }
   .mini.slide { background: #fff; }
   .mini.slide::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--t-slide); }
   .mini.demo { background: #eef1f6; }
@@ -154,6 +158,10 @@
 
   /* ---------- prompter ---------- */
   .pair { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+  .modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .modes > div { padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .modes > div > b { display: block; font-size: 16px; margin-bottom: 2px; }
+  .modes p { font-size: 14px; color: var(--muted); line-height: 1.55; }
   .pair p { color: var(--muted); font-size: 15px; }
   .pair p b { color: var(--ink); }
 
@@ -178,7 +186,7 @@
 
   @media (max-width: 600px) {
     .wrap { padding-block: 32px 56px; }
-    .steps-nav, .legend, .layouts, .checks, .pair { grid-template-columns: 1fr; }
+    .steps-nav, .legend, .layouts, .checks, .pair, .modes { grid-template-columns: 1fr; }
     .pin { width: 22px; height: 22px; margin: -11px 0 0 -11px; font-size: 12px; box-shadow: 0 0 0 2px #fff, 0 3px 8px rgba(0, 0, 0, 0.3); }
     .step-no { width: 44px; height: 44px; font-size: 20px; border-radius: 14px; }
     h2 { font-size: 23px; }
@@ -190,11 +198,12 @@
   <header>
     <p class="eyebrow"><span class="rec-dot"></span>강의 스튜디오 사용법</p>
     <h1>슬라이드를 넘기듯 말하면, 편집된 강의 영상이 나옵니다</h1>
-    <p class="lead">맥북과 크롬에서 씁니다. 큐시트를 만들고, 리모컨으로 촬영하고, 버튼 하나로 MP4를 만듭니다.</p>
+    <p class="lead">맥북과 크롬에서 씁니다. 큐시트를 만들고, 리모컨으로 촬영하고, 버튼 하나로 MP4를 만듭니다. 발표자 배경을 지우고 슬라이드 옆에 세우는 대학 강의 방식도 그대로 만들어집니다.</p>
     <nav class="steps-nav" aria-label="단계">
       <a href="#step1"><b>1</b>큐시트 만들기</a>
-      <a href="#step2"><b>2</b>촬영하기</a>
-      <a href="#step3"><b>3</b>영상 만들기</a>
+      <a href="#look"><b>2</b>화면 구성</a>
+      <a href="#step2"><b>3</b>촬영하기</a>
+      <a href="#step3"><b>4</b>영상 만들기</a>
     </nav>
   </header>
 
@@ -207,34 +216,71 @@
       <li><span class="ui">슬라이드 가져오기</span>로 PDF나 PPT 파일을 올립니다. 화면에 끌어다 놓아도 됩니다.</li>
       <li>PPT의 <b>발표자 노트가 대본</b>으로 들어갑니다. 대본 칸에서 바로 고칠 수 있습니다.</li>
       <li>장면 사이에 마우스를 올리면 <span class="ui">+ 여기에 장면 추가</span>가 나옵니다. 데모 · 영상 · 얼굴 장면을 넣으세요.</li>
+      <li>퀴즈 화면처럼 슬라이드만 보여야 하는 장면은 <span class="ui">발표자</span> 체크를 끄세요.</li>
     </ul>
     <figure class="shot">
       <div class="frame">
         <img src="guide/cuesheet.webp" width="1440" height="900" alt="큐시트 화면: 슬라이드 가져오기 버튼과 장면별 대본 칸">
-        <span class="pin" style="left:9.9%;top:13.6%">1</span>
-        <span class="pin" style="left:88.3%;top:56.5%">2</span>
-        <span class="pin" style="left:12.1%;top:65.8%">3</span>
-        <span class="pin" style="left:94.8%;top:9.2%">4</span>
+        <span class="pin" style="left:10.9%;top:13.7%">1</span>
+        <span class="pin" style="left:86.8%;top:58%">2</span>
+        <span class="pin" style="left:13%;top:65.8%">3</span>
+        <span class="pin" style="left:70.3%;top:3.4%">4</span>
       </div>
       <ol class="legend">
         <li><i class="n">1</i><div><b>슬라이드 가져오기</b> <span>PDF · PPT · PPTX</span></div></li>
         <li><i class="n">2</i><div><b>대본</b> <span>촬영 중 프롬프터에 그대로 뜹니다</span></div></li>
         <li><i class="n">3</i><div><b>장면 추가</b> <span>데모 · 영상 · 얼굴</span></div></li>
-        <li><i class="n">4</i><div><b>촬영하기</b> <span>다 적었으면 여기로</span></div></li>
+        <li><i class="n">4</i><div><b>화면 구성 · 촬영하기</b> <span>다 적었으면 여기로</span></div></li>
       </ol>
     </figure>
     <p class="layouts-title">장면은 완성 영상에서 이렇게 나옵니다</p>
     <div class="layouts">
-      <div class="lay"><div class="mini slide"><i class="ln" style="top:9px;width:34px"></i><i class="ln" style="top:18px;width:24px"></i><i class="pip"></i></div><div><b class="t-slide">슬라이드</b><span>슬라이드 + 얼굴 창</span></div></div>
-      <div class="lay"><div class="mini demo"><i class="ln" style="top:14px;width:30px"></i><i class="ln" style="top:23px;width:20px"></i><i class="pip"></i></div><div><b class="t-demo">데모</b><span>데모 탭 화면 + 얼굴 창</span></div></div>
+      <div class="lay"><div class="mini slide"><i class="ln" style="top:9px;width:34px"></i><i class="ln" style="top:18px;width:24px"></i><i class="who"></i></div><div><b class="t-slide">슬라이드</b><span>슬라이드 + 발표자 (배경을 지우고 옆에)</span></div></div>
+      <div class="lay"><div class="mini demo"><i class="ln" style="top:14px;width:30px"></i><i class="ln" style="top:23px;width:20px"></i><i class="who small"></i></div><div><b class="t-demo">데모</b><span>데모 탭 화면 + 발표자 (작게)</span></div></div>
       <div class="lay"><div class="mini video"></div><div><b class="t-video">영상</b><span>데모 탭에서 튼 영상 (유튜브 등)</span></div></div>
-      <div class="lay"><div class="mini face"></div><div><b class="t-face">얼굴</b><span>얼굴 전체 화면 (인사 · 마무리)</span></div></div>
+      <div class="lay"><div class="mini face"><i class="cap"></i></div><div><b class="t-face">얼굴</b><span>발표자 크게 + 이름 자막 (인사 · 마무리)</span></div></div>
+    </div>
+  </section>
+
+  <section class="step" id="look">
+    <div class="step-head">
+      <span class="step-no">2</span>
+      <div><h2>화면 구성</h2><p>완성 영상의 모양을 정합니다. 한 번 정하면 다음 강의도 그대로 씁니다.</p></div>
+    </div>
+    <ul class="points">
+      <li><span class="ui">발표자 합성</span>을 고르면 AI가 발표자 뒤 배경을 지우고 슬라이드 옆에 세웁니다. 초록 배경천 없이 책상에서 그냥 찍으면 됩니다.</li>
+      <li>큰 미리보기에서 발표자를 <b>좌우로 끌어</b> 위치를 옮기고, <span class="ui">크기</span> 막대로 크기를 정합니다.</li>
+      <li><span class="ui">이름 자막</span>에 이름과 소속을 넣으면 인사 장면에 나옵니다. 인사 장면 배경은 사진이나 표지 슬라이드로 바꿀 수 있습니다.</li>
+    </ul>
+    <figure class="shot">
+      <div class="frame">
+        <img src="guide/look.webp" width="1440" height="900" alt="화면 구성 화면: 큰 미리보기, 발표자 위치, 장면별 설정">
+        <span class="pin" style="left:7.6%;top:21.8%">1</span>
+        <span class="pin" style="left:69.1%;top:50.7%">2</span>
+        <span class="pin" style="left:9%;top:81.2%">3</span>
+        <span class="pin" style="left:69.1%;top:69.3%">4</span>
+      </div>
+      <ol class="legend">
+        <li><i class="n">1</i><div><b>미리보기</b> <span>보이는 그대로 영상이 됩니다. 발표자를 끌어서 옮기세요</span></div></li>
+        <li><i class="n">2</i><div><b>발표자 위치</b> <span>자동 · 오른쪽 · 왼쪽</span></div></li>
+        <li><i class="n">3</i><div><b>이 장면만</b> <span>이 장면만 다르게 (줄이기 · 발표자 없음 등)</span></div></li>
+        <li><i class="n">4</i><div><b>배경 지우기</b> <span>AI 자동, 또는 초록 배경천</span></div></li>
+      </ol>
+    </figure>
+    <div class="modes">
+      <div><b>자동</b><p>슬라이드마다 내용이 적은 쪽에 섭니다. 양쪽이 다 차 있으면 슬라이드를 줄이고 옆에 섭니다.</p></div>
+      <div><b>반자동</b><p>자동으로 두고, 마음에 안 드는 장면만 <b>장면별 미리보기</b>에서 눌러 바꿉니다.</p></div>
+      <div><b>수동</b><p>오른쪽이나 왼쪽으로 고정합니다. 모든 장면이 같은 자리입니다.</p></div>
+    </div>
+    <div class="pair">
+      <div class="frame"><img src="guide/look-face.webp" width="1600" height="900" alt="인사 장면: 표지 슬라이드 배경 앞의 발표자와 이름 자막"></div>
+      <p><b>인사 장면</b>은 이렇게 나옵니다. 카메라를 켜기 전에는 회색 인물로 자리만 보여 주고, <b>촬영 화면에서 카메라를 한 번 켜면</b> 실제 내 모습으로 바뀝니다.</p>
     </div>
   </section>
 
   <section class="step" id="step2">
     <div class="step-head">
-      <span class="step-no">2</span>
+      <span class="step-no">3</span>
       <div><h2>촬영하기</h2><p>준비 화면에서 네 가지를 확인하고 녹화를 시작합니다.</p></div>
     </div>
     <figure class="shot">
@@ -286,24 +332,23 @@
 
   <section class="step" id="step3">
     <div class="step-head">
-      <span class="step-no">3</span>
+      <span class="step-no">4</span>
       <div><h2>영상 만들기</h2><p>버튼 하나면 됩니다.</p></div>
     </div>
     <ul class="points">
-      <li><span class="ui">MP4 만들기</span>를 누르면 NG를 빼고 슬라이드 · 데모 · 얼굴을 합칩니다.</li>
-      <li>얼굴 창의 <b>위치와 크기</b>를 고를 수 있습니다.</li>
+      <li><span class="ui">MP4 만들기</span>를 누르면 NG를 빼고, 화면 구성대로 슬라이드 · 데모 · 발표자를 합칩니다.</li>
       <li>마음에 안 드는 테이크는 <span class="ui">제외</span>하세요. 그 전 테이크가 대신 들어갑니다.</li>
     </ul>
     <figure class="shot">
       <div class="frame">
-        <img src="guide/export.webp" width="1440" height="1060" alt="영상 만들기 화면: 얼굴 창 설정, MP4 만들기 버튼, 완성 영상">
-        <span class="pin" style="left:10.2%;top:21.6%">1</span>
-        <span class="pin" style="left:76.3%;top:16.9%">2</span>
-        <span class="pin" style="left:11.2%;top:33%">3</span>
-        <span class="pin" style="left:35.8%;top:92.8%">4</span>
+        <img src="guide/export.webp" width="1440" height="1060" alt="영상 만들기 화면: 화면 구성 요약, MP4 만들기 버튼, 완성 영상">
+        <span class="pin" style="left:11%;top:19.2%">1</span>
+        <span class="pin" style="left:78.4%;top:13%">2</span>
+        <span class="pin" style="left:15.1%;top:30.6%">3</span>
+        <span class="pin" style="left:35.3%;top:95.7%">4</span>
       </div>
       <ol class="legend">
-        <li><i class="n">1</i><div><b>얼굴 창 위치 · 크기</b> <span>네 모서리 중 하나</span></div></li>
+        <li><i class="n">1</i><div><b>화면 구성</b> <span>지금 설정. 바꾸려면 화면 구성 바꾸기</span></div></li>
         <li><i class="n">2</i><div><b>MP4 만들기</b> <span>35분 강의는 15~30분쯤 걸립니다</span></div></li>
         <li><i class="n">3</i><div><b>완성 영상</b> <span>1080p MP4, 바로 확인하고 받기</span></div></li>
         <li><i class="n">4</i><div><b>제외</b> <span>이 테이크 대신 그 전 테이크를 씁니다</span></div></li>
@@ -318,6 +363,7 @@
       <li><div>방해금지 모드를 켰나요?<span>알림 소리가 녹음되지 않습니다</span></div></li>
       <li><div>탭 오디오 공유를 켰나요?<span>유튜브 소리가 영상에 들어갑니다</span></div></li>
       <li><div>프롬프터 창이 카메라 아래에 있나요?<span>대본을 읽어도 시선이 카메라로 갑니다</span></div></li>
+      <li><div>상반신이 화면에 다 나오나요?<span>배경 지우기가 깔끔해지고 슬라이드 옆에 보기 좋게 섭니다</span></div></li>
     </ul>
   </section>
 
@@ -330,7 +376,9 @@
       <div><dt>녹화 중에 창이 꺼졌어요</dt><dd>1초마다 저장되고 있었습니다. 다시 열어 이어서 찍으면 되고, 찍던 장면도 영상에 들어갑니다.</dd></div>
       <div><dt>유튜브 소리가 안 들어갔어요</dt><dd>데모 탭을 연결할 때 탭 오디오도 공유를 켜야 합니다. 연결을 끊고 다시 연결하세요.</dd></div>
       <div><dt>완성 영상은 어디 있나요?</dt><dd>영상 만들기 화면에서 Finder에서 보기를 누르세요.</dd></div>
-      <div><dt>영상 만들기가 오래 걸려요</dt><dd>35분 강의는 처음 만들 때 15~30분쯤 걸립니다. 그동안 다른 일을 해도 되고, 터미널 창만 닫지 마세요. 다시 만들 때는 몇 분이면 됩니다.</dd></div>
+      <div><dt>영상 만들기가 오래 걸려요</dt><dd>35분 강의는 처음 만들 때 15~30분쯤 걸리고, 발표자 합성이면 배경 지우기에 5~15분쯤 더 걸립니다. 그동안 다른 일을 해도 되고, 터미널 창만 닫지 마세요. 다시 만들 때는 몇 분이면 됩니다.</dd></div>
+      <div><dt>배경이 깔끔하게 안 지워져요</dt><dd>뒤쪽을 단순하고 밝게 하고, 얼굴에 빛이 고르게 오게 하세요. 초록 배경천이 있다면 화면 구성에서 <b>초록 배경천</b>을 고르면 가장 깔끔합니다.</dd></div>
+      <div><dt>발표자가 슬라이드 글자를 가려요</dt><dd>화면 구성의 장면별 미리보기에서 그 장면을 누르고 <b>왼쪽</b>이나 <b>줄이기</b>를 고르세요. 퀴즈 화면은 <b>발표자 없음</b>으로 두면 됩니다.</dd></div>
       <div><dt>맥 저장 공간이 부족해요</dt><dd>영상을 다 만든 강의는 영상 만들기 화면 아래의 중간 파일 [정리]를 누르세요. 녹화 원본과 완성 영상은 남습니다.</dd></div>
     </dl>
   </section>

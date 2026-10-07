@@ -35,6 +35,10 @@ export const api = {
   buildStatus: (pid) => request('GET', `${P(pid)}/build`),
   openFolder: (pid, target) => request('POST', `${P(pid)}/open`, { target }),
   storage: (pid) => request('GET', `${P(pid)}/storage`),
+  lookInfo: (pid) => request('GET', `${P(pid)}/look`),
+  cutout: (pid) => request('GET', `${P(pid)}/look/cutout`),
+  putAsset: (pid, name, blob) => request('PUT', `${P(pid)}/assets/${name}`, blob),
+  deleteAsset: (pid, name) => request('DELETE', `${P(pid)}/assets/${name}`),
   clearCache: (pid) => request('DELETE', `${P(pid)}/cache`),
   /** Converts a PowerPoint file on this Mac. Resolves { blob, via }. */
   convert: async (file, to) => {

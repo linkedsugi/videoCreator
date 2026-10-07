@@ -2,6 +2,7 @@ import { renderHome } from './views/home.js';
 import { renderProject } from './views/project.js';
 import { renderTakes } from './views/takes.js';
 import { renderStudio } from './views/studio.js';
+import { renderLook } from './views/look.js';
 import { checkNavGuard } from './nav.js';
 import { html, toast } from './ui.js';
 
@@ -32,7 +33,8 @@ async function route() {
   root.innerHTML = '<div class="page narrow"><p class="muted">불러오는 중…</p></div>';
   try {
     if (parts[0] === 'p' && parts[1]) {
-      const view = parts[2] === 'studio' ? renderStudio : parts[2] === 'takes' ? renderTakes : renderProject;
+      const views = { studio: renderStudio, takes: renderTakes, look: renderLook };
+      const view = views[parts[2]] ?? renderProject;
       document.body.classList.toggle('dark', parts[2] === 'studio');
       cleanup = await view(root, { pid: decodeURIComponent(parts[1]), params });
     } else {

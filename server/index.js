@@ -8,6 +8,7 @@ import { Store, HttpError } from './store.js';
 import { BuildManager } from './build/manager.js';
 import { SlideConverter } from './convert.js';
 import { findFfmpeg } from './build/ffmpeg.js';
+import { LookService } from './look.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -21,6 +22,7 @@ export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg,
   const ff = ffmpeg === undefined ? await findFfmpeg() : ffmpeg;
   const builds = new BuildManager({ store, ffmpeg: ff });
   const slides = converter ?? new SlideConverter(path.join(store.dataDir, '_convert'));
+  const looks = new LookService({ store, ffmpeg: ff });
 
   const app = express();
   app.disable('x-powered-by');
@@ -69,6 +71,16 @@ export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg,
   });
   api.post('/projects/:pid/slides/commit', json, async (req, res) => {
     res.json(await store.commitSlides(req.params.pid, Number(req.body?.count)));
+  });
+
+  // The look: presenter placement preview, face-scene background, name caption.
+  api.get('/projects/:pid/look', async (req, res) => res.json(await looks.info(req.params.pid)));
+  api.get('/projects/:pid/look/cutout', async (req, res) => res.json({ cutout: await looks.cutout(req.params.pid) }));
+  api.put('/projects/:pid/assets/:name', binary('20mb'), async (req, res) => {
+    res.json(await store.putAsset(req.params.pid, req.params.name, bodyBuffer(req)));
+  });
+  api.delete('/projects/:pid/assets/:name', async (req, res) => {
+    res.json(await store.deleteAsset(req.params.pid, req.params.name));
   });
 
   api.post('/projects/:pid/sessions', json, async (req, res) => {
@@ -125,7 +137,7 @@ export async function createApp({ dataDir = path.join(ROOT, 'projects'), ffmpeg,
   app.use('/data', express.static(store.dataDir, { setHeaders: noCache, dotfiles: 'ignore' }));
   app.use(staticDir('public'));
 
-  return { app, store, builds, ffmpeg: ff, converter: slides };
+  return { app, store, builds, looks, ffmpeg: ff, converter: slides };
 }
 
 function openBrowser(url) {

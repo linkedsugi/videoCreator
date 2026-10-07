@@ -209,6 +209,7 @@ export async function renderStudio(root, { pid, params }) {
       preview.srcObject = S.camStream;
       $('#preview-empty').hidden = true;
     }
+    snapshotSoon();
     const info = $('#cam-info');
     if (info) info.textContent = `${v?.label ?? ''} · ${describeVideo(S.camStream)}`;
     if (a) {
@@ -221,6 +222,24 @@ export async function renderStudio(root, { pid, params }) {
       });
     }
     await fillDeviceLists();
+  }
+
+  // A still of the presenter for the look editor's preview ("화면 구성"),
+  // taken once the camera has settled its exposure and focus.
+  let snapshotTimer = null;
+  function snapshotSoon() {
+    clearTimeout(snapshotTimer);
+    snapshotTimer = setTimeout(async () => {
+      const video = $('#cam-preview');
+      if (!video?.videoWidth) return;
+      const scale = Math.min(1, 1280 / video.videoWidth);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.88));
+      if (blob) api.putAsset(pid, 'sample', blob).catch(() => {});
+    }, 2500);
   }
 
   async function connectScreen() {
@@ -742,6 +761,7 @@ export async function renderStudio(root, { pid, params }) {
 
   return async () => {
     document.removeEventListener('keydown', onKey);
+    clearTimeout(snapshotTimer);
     if (S.phase === 'live') await stopRecording({ ask: false });
     S.stopTicking?.();
     S.meter?.close();

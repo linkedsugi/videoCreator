@@ -6,6 +6,9 @@
 //       events.jsonl            what happened when (cue changes, retakes, ...)
 //       camera.webm             camera + mic, appended every second
 //       screen-1.webm           shared demo tab (+ its sound)
+//   <pid>/assets/               the look: background.jpg (face scenes),
+//                               caption.png (name caption), sample.jpg (camera
+//                               snapshot for the preview), cutout.png (preview)
 //   <pid>/build/                cached intermediate files
 //   <pid>/exports/              finished MP4 files
 
@@ -13,6 +16,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { parseSession, chooseTakes } from './build/timeline.js';
+import { defaultLook, cleanLook, SIDES } from '../public/js/look.js';
 
 export class HttpError extends Error {
   constructor(status, message) {
@@ -70,7 +74,7 @@ function text(value, max, { multiline = false } = {}) {
 }
 
 export function defaultSettings() {
-  return { pipCorner: 'br', pipSize: 'm', loudnorm: true };
+  return { pipCorner: 'br', pipSize: 'm', loudnorm: true, look: defaultLook() };
 }
 
 function cleanSettings(s) {
@@ -78,8 +82,16 @@ function cleanSettings(s) {
     pipCorner: ['br', 'bl', 'tr', 'tl'].includes(s.pipCorner) ? s.pipCorner : 'br',
     pipSize: ['s', 'm', 'l'].includes(s.pipSize) ? s.pipSize : 'm',
     loudnorm: s.loudnorm !== false,
+    look: cleanLook(s.look ?? {}),
   };
 }
+
+/** Files of the look a project can hold, and what they must be. */
+export const ASSETS = {
+  background: { file: 'background.jpg', kinds: ['jpeg'], max: 15e6, inherit: true },
+  caption: { file: 'caption.png', kinds: ['png'], max: 5e6, inherit: true },
+  sample: { file: 'sample.jpg', kinds: ['jpeg'], max: 5e6, inherit: false },
+};
 
 function cleanCues(list) {
   const seen = new Set();
@@ -98,6 +110,7 @@ function cleanCues(list) {
     if (c.type === 'slide') cue.page = Math.min(MAX_SLIDES, Math.max(1, Math.floor(Number(c.page) || 1)));
     if (c.type === 'video') cue.url = text(c.url, 2000);
     if (typeof c.showFace === 'boolean') cue.showFace = c.showFace;
+    if (c.type !== 'face' && SIDES.includes(c.side)) cue.side = c.side;
     out.push(cue);
   }
   return out;
@@ -105,6 +118,10 @@ function cleanCues(list) {
 
 function isPng(buf) {
   return Buffer.isBuffer(buf) && buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+}
+
+function isJpeg(buf) {
+  return Buffer.isBuffer(buf) && buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
 }
 
 async function dirSize(dir) {
@@ -179,9 +196,22 @@ export class Store {
     return out.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
   }
 
+  /**
+   * A new lecture starts with the look of the most recently edited one
+   * (caption, background, presenter placement), so a series looks the same.
+   */
   async createProject({ title }) {
     const id = newId('p');
     const now = new Date().toISOString();
+    const latest = (await this.listProjects())[0];
+    let settings = defaultSettings();
+    if (latest) {
+      try {
+        settings = { ...settings, ...(await this.getProject(latest.id)).settings };
+      } catch {
+        // keep the defaults
+      }
+    }
     const project = {
       id,
       title: text(title, 120).trim() || '새 강의',
@@ -190,9 +220,18 @@ export class Store {
       slides: { count: 0, version: 0 },
       cues: [],
       excludedTakes: [],
-      settings: defaultSettings(),
+      settings: cleanSettings(settings),
     };
     await fsp.mkdir(path.join(this.dataDir, id, 'sessions'), { recursive: true });
+    if (latest) {
+      for (const asset of Object.values(ASSETS)) {
+        if (!asset.inherit) continue;
+        const from = path.join(this.dataDir, latest.id, 'assets', asset.file);
+        if (!(await exists(from))) continue;
+        await fsp.mkdir(path.join(this.dataDir, id, 'assets'), { recursive: true });
+        await fsp.copyFile(from, path.join(this.dataDir, id, 'assets', asset.file));
+      }
+    }
     await writeJsonAtomic(path.join(this.dataDir, id, 'project.json'), project);
     return project;
   }
@@ -201,7 +240,7 @@ export class Store {
     const file = path.join(this.projectDir(pid), 'project.json');
     try {
       const p = await readJson(file);
-      p.settings = { ...defaultSettings(), ...p.settings };
+      p.settings = cleanSettings({ ...defaultSettings(), ...p.settings });
       return p;
     } catch (err) {
       if (err.code === 'ENOENT') throw new HttpError(404, '강의를 찾을 수 없습니다.');
@@ -273,6 +312,46 @@ export class Store {
         slides: { count, version: (current.slides?.version ?? 0) + 1, updatedAt: new Date().toISOString() },
       };
     });
+  }
+
+  assetPath(pid, name) {
+    const asset = ASSETS[name];
+    if (!asset) throw new HttpError(404, '없는 파일 종류입니다.');
+    return path.join(this.projectDir(pid), 'assets', asset.file);
+  }
+
+  async putAsset(pid, name, buf) {
+    const asset = ASSETS[name];
+    if (!asset) throw new HttpError(404, '없는 파일 종류입니다.');
+    await this.getProject(pid);
+    const ok = (asset.kinds.includes('png') && isPng(buf)) || (asset.kinds.includes('jpeg') && isJpeg(buf));
+    if (!ok) throw new HttpError(400, `${asset.kinds.join(', ').toUpperCase()} 이미지가 아닙니다.`);
+    if (buf.length > asset.max) throw new HttpError(413, '이미지가 너무 큽니다.');
+    const file = this.assetPath(pid, name);
+    await fsp.mkdir(path.dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    await fsp.writeFile(tmp, buf);
+    await fsp.rename(tmp, file);
+    return { ok: true, url: this.assetUrl(pid, name, (await fsp.stat(file)).mtimeMs) };
+  }
+
+  async deleteAsset(pid, name) {
+    await fsp.rm(this.assetPath(pid, name), { force: true });
+    return { ok: true };
+  }
+
+  assetUrl(pid, name, version) {
+    return `/data/${pid}/assets/${ASSETS[name].file}?v=${Math.round(version)}`;
+  }
+
+  /** URLs of the look's files that exist, with a version so browsers reload changed ones. */
+  async assetUrls(pid) {
+    const out = {};
+    for (const name of Object.keys(ASSETS)) {
+      const stat = await fsp.stat(this.assetPath(pid, name)).catch(() => null);
+      out[name] = stat ? this.assetUrl(pid, name, stat.mtimeMs) : null;
+    }
+    return out;
   }
 
   async createSession(pid, meta = {}) {

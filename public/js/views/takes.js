@@ -5,6 +5,21 @@ import { html, $, $$, fmtClock, fmtDateTime, fmtBytes, toast } from '../ui.js';
 import { CUE_TYPES, cueTitle } from '../cues.js';
 
 const REASONS = { retake: 'NG', next: '', jump: '', stop: '', crash: '중단됨', interrupted: '' };
+const CORNERS = { tl: '왼쪽 위', tr: '오른쪽 위', bl: '왼쪽 아래', br: '오른쪽 아래' };
+const PIP_SIZES = { s: '작게', m: '보통', l: '크게' };
+
+function lookSummary(s) {
+  const L = s.look;
+  if (L.style === 'pip') return `작은 얼굴 창 · ${CORNERS[s.pipCorner]} · ${PIP_SIZES[s.pipSize]}`;
+  const place = { auto: '위치 자동', right: '오른쪽', left: '왼쪽' }[L.placement];
+  return `발표자 합성 · ${place} · ${L.keyer === 'ai' ? 'AI 배경 지우기' : '초록 배경천'}`;
+}
+
+function captionSummary(s) {
+  const c = s.look.caption;
+  if (!c.name.trim() || c.show === 'off') return '이름 자막 없음';
+  return `이름 자막: ${c.name}${c.org ? ` · ${c.org}` : ''}`;
+}
 
 export async function renderTakes(root, { pid }) {
   let project = await api.getProject(pid);
@@ -42,7 +57,7 @@ export async function renderTakes(root, { pid }) {
         <div class="job running">
           <div class="bar"><div class="bar-fill" style="width:${Math.round((job.progress ?? 0) * 100)}%"></div></div>
           <div>${job.step} · ${Math.round((job.progress ?? 0) * 100)}%</div>
-          <p class="muted small">화면을 닫아도 계속 만듭니다. 촬영 길이에 따라 몇 분 걸릴 수 있습니다.</p>
+          <p class="muted small">화면을 닫아도 계속 만듭니다. 촬영 길이에 따라 몇 분 걸릴 수 있습니다.${project.settings?.look?.style === 'cutout' ? ' 발표자 배경 지우기는 처음 한 번만 오래 걸리고, 다시 만들 때는 빠릅니다.' : ''}</p>
         </div>`;
     }
     if (job.state === 'error') {
@@ -84,19 +99,12 @@ export async function renderTakes(root, { pid }) {
               <a href="#/p/${pid}/studio?from=${missing[0].c.id}">${missing[0].i + 1}번 장면부터 촬영하기 →</a></p>` : ''}
           </div>
           <div class="export-options">
-            <div class="opt">
-              <span class="opt-label">얼굴 창 위치</span>
-              <div class="corner-picker">
-                ${[['tl', '↖'], ['tr', '↗'], ['bl', '↙'], ['br', '↘']].map(([v, icon]) => html`
-                  <button class="corner ${s.pipCorner === v ? 'on' : ''}" data-corner="${v}" title="${v}">${icon}</button>`)}
+            <div class="look-summary">
+              <div class="look-summary-text">
+                <b>${lookSummary(s)}</b>
+                <span class="muted small">${captionSummary(s)}</span>
               </div>
-            </div>
-            <div class="opt">
-              <span class="opt-label">얼굴 창 크기</span>
-              <div class="seg-picker">
-                ${[['s', '작게'], ['m', '보통'], ['l', '크게']].map(([v, label]) => html`
-                  <button class="${s.pipSize === v ? 'on' : ''}" data-size="${v}">${label}</button>`)}
-              </div>
+              <a class="btn small" href="#/p/${pid}/look">화면 구성 바꾸기</a>
             </div>
             <label class="check"><input type="checkbox" id="loudnorm" ${s.loudnorm !== false ? 'checked' : ''}> 소리 크기 자동 맞춤</label>
           </div>
@@ -182,8 +190,6 @@ export async function renderTakes(root, { pid }) {
 
   function bind() {
     $('#clear-cache')?.addEventListener('click', clearCache);
-    for (const b of $$('[data-corner]')) b.addEventListener('click', () => saveSettings({ pipCorner: b.dataset.corner }));
-    for (const b of $$('[data-size]')) b.addEventListener('click', () => saveSettings({ pipSize: b.dataset.size }));
     $('#loudnorm').addEventListener('change', (e) => saveSettings({ loudnorm: e.target.checked }));
     $('#build-btn').addEventListener('click', startBuild);
     $('#open-folder')?.addEventListener('click', () => api.openFolder(pid, 'exports').catch((err) => toast(err.message, 'error')));

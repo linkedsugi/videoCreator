@@ -68,7 +68,7 @@ export async function renderProject(root, { pid }) {
             ${cue.type === 'slide'
               ? html`<span class="cue-title">슬라이드 ${cue.page}</span>${cue.title ? html`<span class="cue-subtitle">${cue.title}</span>` : ''}`
               : html`<input class="cue-title-input" data-field="title" value="${cue.title}" placeholder="${cueTitle(cue)} 제목" maxlength="200">`}
-            ${cue.type !== 'face' ? html`<label class="check small" title="완성 영상에서 얼굴 창을 보여줄지"><input type="checkbox" data-field="showFace" ${showFaceOf(cue) ? 'checked' : ''}> 얼굴 창</label>` : ''}
+            ${cue.type !== 'face' ? html`<label class="check small" title="완성 영상에 발표자를 보여줄지 (퀴즈 화면 등은 끄세요)"><input type="checkbox" data-field="showFace" ${showFaceOf(cue) ? 'checked' : ''}> 발표자</label>` : ''}
             <span class="grow"></span>
             ${takes ? html`<span class="pill ok small">✓ 테이크 ${takes}</span>` : ''}
             <div class="cue-actions">
@@ -102,6 +102,7 @@ export async function renderProject(root, { pid }) {
         <span class="save-status" id="save-status">저장됨</span>
         <span class="grow"></span>
         <a class="help-link" href="/guide.html" target="_blank" rel="noopener">사용법</a>
+        <a class="btn" href="#/p/${pid}/look">화면 구성</a>
         <a class="btn" href="#/p/${pid}/takes">테이크 · 영상 만들기</a>
         <a class="btn rec" href="#/p/${pid}/studio">● 촬영하기</a>
       </header>
